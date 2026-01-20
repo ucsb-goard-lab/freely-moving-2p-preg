@@ -254,7 +254,7 @@ def deconcatenate_continuous_data(rpathtwoup, cfg_path, frame_ranges):
         print("MultiIndex columns:", dlc_segment.columns)
 
         # Save DLC data segment (you may need to adjust this based on your fm2p library)
-        dlc_output_path = os.path.join(os.path.dirname(individual_s2p_dir), f'splitted_DLC_recording_{r+1}.h5')
+        dlc_output_path = os.path.join(os.path.dirname(individual_s2p_dir), f'splitted_topDLC_resnet50_{r+1}.h5')
         dlc_segment.to_hdf(dlc_output_path, key='df_with_missing', mode='w')
         
         # Extract top down video
@@ -277,7 +277,6 @@ def deconcatenate_continuous_data(rpathtwoup, cfg_path, frame_ranges):
         print(f"  DLC frames: {dlc_segment.shape[0]}")
         
     return twopdata
-
 
 def deconcatenate_twopdata(rpathtwoup, cfg_path, frame_ranges=None):
     """
@@ -304,39 +303,40 @@ def deconcatenate_twopdata(rpathtwoup, cfg_path, frame_ranges=None):
     if cfg_path is None:
         cfg_path = r"F:\2P\pregnancy\2p_data\250701_NSW130_Baseline3\config_HP.yaml"
     
-    # Check for DLC files to determine data type
-    # Type 1: Multiple DLC files (one in each recording folder)
-    # Type 2: Single continuous DLC file (in main directory)
+    # Look for DLC files in main directory AND all subdirectories (recursive search)
+    dlc_files = fm2p.find('*DLC*.h5', rpathtwoup, MR=False)  # Changed to MR=False
     
-    # Look for DLC files in main directory (Type 2 - continuous)
-    dlc_files = fm2p.find('*DLC_resnet50_*preg_mini2p*.h5', rpathtwoup, MR=False)
+    # Filter for preg_mini2p files only
+    dlc_files = [f for f in dlc_files if 'preg_mini2p' in f.lower()]
     
     print(f"Found {len(dlc_files)} DLC file(s) in recording folders")
+    for f in dlc_files:
+        print(f"  {f}")
     
     if len(dlc_files) == 4:
-        print("Data Type 1: Separate DLC recordings + concatenated Suite2p")
+        print("\nData Type 1: Separate DLC recordings + concatenated Suite2p")
         print("Will deconcatenate Suite2p based on DLC frame counts...")
-        return deconcatenate_separate_recordings(rpathtwoup, cfg_path)
+        return deconcatenate_separate_recordings(rpathtwoup, cfg_path, dlc_files)
         
     elif len(dlc_files) == 1:
-        print("Data Type 2: Continuous recordings (single DLC + single Suite2p)")
+        print("\nData Type 2: Continuous recordings (single DLC + single Suite2p)")
         if frame_ranges is None:
             frame_ranges = get_frame_ranges_from_user()
         print("Will deconcatenate both DLC and Suite2p using provided frame ranges...")
         return deconcatenate_continuous_data(rpathtwoup, cfg_path, frame_ranges)
         
     else:
-        raise ValueError(f"Ambiguous data structure: {len(dlc_files)} DLC files in main directory, {dlc_files} in recording folders. Expected either separate DLC files OR single continuous DLC file.")
+        raise ValueError(f"Ambiguous data structure: Found {len(dlc_files)} DLC files. Expected either 4 separate DLC files OR 1 continuous DLC file.")
+    
 
-
-def deconcatenate_separate_recordings(rpathtwoup, cfg_path):
+def deconcatenate_separate_recordings(rpathtwoup, cfg_path, dlc_files):
     """
     Original function for Type 1 data: separate DLC recordings + concatenated Suite2p
     """
     rpath = []
     cfg = fm2p.read_yaml(cfg_path)
 
-    dlcpath = fm2p.find('*DLC_resnet50_*preg_mini2p*.h5', rpathtwoup, MR=False)
+    dlcpath = dlc_files
     possible_topdown_videos = fm2p.find('*labeled.mp4', rpathtwoup, MR=False)
 
     numDLCframes = np.zeros(np.size(dlcpath), dtype=int) 
@@ -380,7 +380,7 @@ def deconcatenate_separate_recordings(rpathtwoup, cfg_path):
     for r in range(np.size(dlcpath,0)):
         twopdata.append({})
 
-    if numtwopframes == np.sum(numDLCframes):
+    if numtwopframes == np.sum(numDLCframes) or np.abs(numtwopframes - np.sum(numDLCframes) == 1):
         # Calculate frame ranges for each recording
         frame_start = 0
         for r in range(np.size(dlcpath,0)):
@@ -492,7 +492,7 @@ def deconcatenate_separate_recordings(rpathtwoup, cfg_path):
             np.save(os.path.join(rpathtwoup, 'Processed', str(r+1), 'suite2p', 'ops.npy'), twopdata[r]['ops'])
             
             frame_start = frame_end + 1
-                    
+                            
     elif numtwopframes != np.sum(numDLCframes) and (numtwopframes - np.sum(numDLCframes) < 4 or numtwopframes - np.sum(numDLCframes) < 0):
         # throw an error if the number of 2P frames does not match the number of DLC frames
         raise ValueError("Mismatch between number of 2P frames and DLC frames. Please check the data files.")

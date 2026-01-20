@@ -8,8 +8,8 @@ def hippocampal_preprocess(cfg_path):
 
     cfg = fm2p.read_yaml(cfg_path)
     # recording_names = cfg['hp_empty_recs']
-    # recording_names = cfg['hp_home_recs']
-    recording_names = cfg['hp_empty_recs'] + cfg['hp_home_recs']
+    recording_names = cfg['hp_home_recs']
+    # recording_names = cfg['hp_empty_recs'] + cfg['hp_home_recs']
     num_recordings = len(recording_names)
     
     cohens_thresh = cfg['cohens_d']
@@ -19,7 +19,7 @@ def hippocampal_preprocess(cfg_path):
         full_rname = rnum+1
         # r_name = rname.split('\\')[-1]
         # rpath = cfg['spath']
-        rpath = os.path.join(cfg['spath'], "processed",str(rname))
+        rpath = os.path.join(cfg['spath'], "Processed",str(rname))
 
         # Topdown camera files
         possible_topdown_videos = fm2p.find('*.mp4', rpath, MR=False)
@@ -32,7 +32,8 @@ def hippocampal_preprocess(cfg_path):
         #     filter=False
         # )
     
-        topdown_pts_path = fm2p.find('*.h5', rpath, MR=True)
+        topdown_pts_path = fm2p.find('*DLC*.h5', rpath, MR=True)
+        # topdown_pts_path = fm2p.find('*topDLC_resnet50*.h5', rpath, MR=True)
     
         F_path = fm2p.find('F.npy', rpath, MR=True)
         Fneu_path = fm2p.find('Fneu.npy', rpath, MR=True)

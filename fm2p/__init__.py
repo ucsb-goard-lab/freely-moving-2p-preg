@@ -218,4 +218,11 @@ from .utils.deconcatenate_2pdata import (
 from .utils.pc_stabilityremapping import PC_StabilityRemapping
 
 from .utils.PC_stability_analysis import (
-    analyze_PC_stability_remapping)
+    analyze_home_stability,
+    compare_home_stability_across_sessions
+)
+
+from .utils.PC_stability_analysis import (
+    analyze_home_stability,
+    compare_home_stability_across_sessions
+)
